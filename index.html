@@ -104,10 +104,10 @@
     <button class="btn" onclick="startApp('teacher')" style="background-color: #059669;">Ich bin die Lehrkraft</button>
   </div>
 
-  <script type="module">
-    // 1. IMPORT FIREBASE 
+<script type="module">
+    // 1. IMPORT FIREBASE (Using set instead of remove)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
     // 2. YOUR FIREBASE CONFIGURATION
     const firebaseConfig = {
@@ -120,10 +120,13 @@
       appId: "1:104797758706:web:aec7a1f3a619a7ffa75c6b"
     };
 
-    // Initialize Firebase and Database
+    // Initialize Firebase and Database (Explicitly targeting Europe)
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const resultsRef = ref(db, 'classroom_results');
+    const db = getDatabase(app, firebaseConfig.databaseURL);
+    
+    const activeSessionRef = ref(db, 'active_session_id');
+    let currentSessionId = "default_session";
+    let unsubscribeResponses = null;
 
     // 3. QUESTION TREE DATA
     const quizData = {
@@ -160,19 +163,26 @@
       "q3_ana_hor": { 
         text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
         a: { text: "Detail", result: "World Café" }, 
-        b: { text: "Überblick", result: "Pecha Kucha" } // Fixed "Non-fiction" typo to match the question flow
+        b: { text: "Überblick", result: "Pecha Kucha" }
       }
     };
 
     const possibleOutcomes = ["Podcast", "Erklärvideo", "Website", "Blogbeitrag", "Poster", "Graphical Recording", "World Café", "Pecha Kucha"];
     let currentQuestionKey = "q1";
 
-    // 4. UI LOGI
+    // 4. UI LOGIC
     window.startApp = function(mode) {
       document.getElementById('mode-selector').classList.add('hidden');
       if (mode === 'student') {
         document.getElementById('student-view').classList.remove('hidden');
-        renderQuestion();
+        // Fetch the active session room ID once right as the student starts
+        onValue(activeSessionRef, (snapshot) => {
+          const data = snapshot.val();
+          if (data && data.id) {
+            currentSessionId = data.id;
+          }
+          renderQuestion();
+        }, { onlyOnce: true });
       } else {
         document.getElementById('teacher-view').classList.remove('hidden');
         initTeacherDashboard();
@@ -184,14 +194,14 @@
       const selected = choice === 'A' ? q.a : q.b;
       
       if (selected.result) {
-        // Reached an outcome! Send to Firebase
-        push(resultsRef, { result: selected.result });
+        // Send to the active session group in the database
+        const sessionResponsesRef = ref(db, `responses/${currentSessionId}`);
+        push(sessionResponsesRef, { result: selected.result });
         
         // Update UI
         document.getElementById('question-container').classList.add('hidden');
         document.getElementById('finished-container').classList.remove('hidden');
       } else {
-        // Go to next question
         currentQuestionKey = selected.next;
         renderQuestion();
       }
@@ -207,9 +217,8 @@
     // 5. TEACHER DASHBOARD LOGIC
     function initTeacherDashboard() {
       const chartDiv = document.getElementById('results-chart');
-      chartDiv.innerHTML = ''; // Clear out prior initializations if any
+      chartDiv.innerHTML = ''; 
       
-      // Build empty bars
       possibleOutcomes.forEach(outcome => {
         chartDiv.innerHTML += `
           <div class="result-bar-container">
@@ -222,8 +231,33 @@
         `;
       });
 
-      // Listen for data changes in real-time
-      onValue(resultsRef, (snapshot) => {
+      // Watch for session updates. If the teacher changes the session, change our live data feed.
+      onValue(activeSessionRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.id) {
+          currentSessionId = data.id;
+          listenToSessionResponses(currentSessionId);
+        } else {
+          listenToSessionResponses("default_session");
+        }
+      });
+    }
+
+    function listenToSessionResponses(sessionId) {
+      if (unsubscribeResponses) unsubscribeResponses(); // Unsubscribe from old session tracking
+
+      const sessionResponsesRef = ref(db, `responses/${sessionId}`);
+
+      // Reset dashboard graphics instantly for the new session
+      possibleOutcomes.forEach(outcome => {
+        const safeId = outcome.replace(/\s+/g, '-');
+        document.getElementById(`count-${safeId}`).innerText = '0';
+        document.getElementById(`bar-${safeId}`).style.width = '0%';
+      });
+      document.getElementById('total-count').innerText = '0';
+
+      // Start listening live to this session
+      unsubscribeResponses = onValue(sessionResponsesRef, (snapshot) => {
         const data = snapshot.val();
         let counts = {};
         possibleOutcomes.forEach(o => counts[o] = 0);
@@ -240,7 +274,6 @@
 
         document.getElementById('total-count').innerText = total;
 
-        // Update bars and numbers
         possibleOutcomes.forEach(outcome => {
           const safeId = outcome.replace(/\s+/g, '-');
           const count = counts[outcome];
@@ -253,9 +286,19 @@
     }
 
     window.clearResults = function() {
-      if(confirm("Möchtest du wirklich alle studentischen Antworten löschen?")) {
-        remove(resultsRef);
-      }
+      const password = prompt("Bitte geben Sie das Lehrkraft-Passwort ein, um die Ergebnisse zurückzusetzen:");
+      if (!password) return;
+
+      const newSessionId = "session_" + Date.now();
+      
+      // Send the reset request with the password token to be validated by Firebase rules
+      set(activeSessionRef, {
+        id: newSessionId,
+        adminToken: password
+      }).catch(error => {
+        alert("Falsches Passwort! Die Live-Ergebnisse konnten nicht zurückgesetzt werden.");
+        console.error("Auth Error: ", error);
+      });
     };
   </script>
 </body>
