@@ -1,5 +1,111 @@
-<script type="module">
-    // 1. IMPORT FIREBASE (Updated to your version 12.15.0 and adding Database)
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WissKomm Formate Quiz</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --bg: #F3F4F6;
+      --text: #1F2937;
+      --card-bg: #FFFFFF;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      background-color: var(--card-bg);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 { margin-top: 0; font-size: 1.5rem; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn:hover { background-color: var(--primary-hover); }
+    
+    /* Teacher Dashboard Styles */
+    .result-bar-container {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .result-label { width: 160px; text-align: left; font-weight: bold; font-size: 0.9rem; }
+    .result-bar-wrapper {
+      flex-grow: 1;
+      background-color: #E5E7EB;
+      border-radius: 4px;
+      height: 24px;
+      margin: 0 10px;
+      overflow: hidden;
+    }
+    .result-bar {
+      height: 100%;
+      background-color: var(--primary);
+      width: 0%;
+      transition: width 0.5s ease-out;
+    }
+    .result-count { width: 30px; text-align: right; }
+    
+    /* Utility */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div id="student-view" class="container hidden">
+    <div id="question-container">
+      <h1 id="question-text">Lade Fragen...</h1>
+      <button class="btn" id="btn-a" onclick="handleAnswer('A')">Option A</button>
+      <button class="btn" id="btn-b" onclick="handleAnswer('B')">Option B</button>
+    </div>
+    <div id="finished-container" class="hidden">
+      <h1>Vielen Dank!</h1>
+      <p>Deine Antwort wurde übermittelt. Schaue auf den Bildschirm der Lehrkraft für die Live-Ergebnisse.</p>
+    </div>
+  </div>
+
+  <div id="teacher-view" class="container hidden">
+    <h1>Live-Ergebnisse des Kurses</h1>
+    <p>Gesamte Antworten: <span id="total-count">0</span></p>
+    <div id="results-chart"></div>
+    <br>
+    <button class="btn" onclick="clearResults()" style="background-color: #DC2626;">Alle Daten zurücksetzen</button>
+  </div>
+
+  <div id="mode-selector" class="container">
+    <h1>Modus auswählen</h1>
+    <button class="btn" onclick="startApp('student')">Ich bin ein Student / eine Studentin</button>
+    <button class="btn" onclick="startApp('teacher')" style="background-color: #059669;">Ich bin die Lehrkraft</button>
+  </div>
+
+  <script type="module">
+    // 1. IMPORT FIREBASE 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
@@ -19,7 +125,7 @@
     const db = getDatabase(app);
     const resultsRef = ref(db, 'classroom_results');
 
-    // 3. QUESTION TREE DATA (3 levels = 8 outcomes)
+    // 3. QUESTION TREE DATA
     const quizData = {
       "q1": { 
         text: "Möchtest du lieber ein digitales oder ein analoges Präsentationsformat?", 
@@ -54,7 +160,7 @@
       "q3_ana_hor": { 
         text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
         a: { text: "Detail", result: "World Café" }, 
-        b: { text: "Non-fiction", result: "Pecha Kucha" } 
+        b: { text: "Überblick", result: "Pecha Kucha" } // Fixed "Non-fiction" typo to match the question flow
       }
     };
 
@@ -101,6 +207,7 @@
     // 5. TEACHER DASHBOARD LOGIC
     function initTeacherDashboard() {
       const chartDiv = document.getElementById('results-chart');
+      chartDiv.innerHTML = ''; // Clear out prior initializations if any
       
       // Build empty bars
       possibleOutcomes.forEach(outcome => {
@@ -146,8 +253,10 @@
     }
 
     window.clearResults = function() {
-      if(confirm("Are you sure you want to delete all student answers?")) {
+      if(confirm("Möchtest du wirklich alle studentischen Antworten löschen?")) {
         remove(resultsRef);
       }
     };
   </script>
+</body>
+</html>
