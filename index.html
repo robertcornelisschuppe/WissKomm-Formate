@@ -35,6 +35,7 @@
     }
     h1 { margin-top: 0; font-size: 1.5rem; }
     h2 { font-size: 1.3rem; margin: 20px 0; color: var(--primary); }
+    .custom-sentence { font-size: 1.1rem; font-style: italic; color: #4B5563; margin-bottom: 20px; }
     .btn {
       display: block;
       width: 100%;
@@ -88,6 +89,7 @@
     <div id="finished-container" class="hidden">
       <h1>Vielen Dank!</h1>
       <h2>Wie wäre es mit: <span id="student-outcome"></span>?</h2>
+      <p id="student-custom-sentence" class="custom-sentence"></p>
       <p>Deine Antwort wurde übermittelt. Schaue auf den Bildschirm der Lehrkraft für die Live-Ergebnisse.</p>
     </div>
   </div>
@@ -127,6 +129,7 @@
     let currentSessionId = "default_session";
     let unsubscribeResponses = null;
 
+    // Custom sentences can be customized inside the "finalSentence" keys below
     const quizData = {
       "q1": { 
         text: "Möchtest du lieber ein digitales oder ein analoges Präsentationsformat?", 
@@ -145,23 +148,23 @@
       },
       "q3_dig_hor": { 
         text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
-        a: { text: "Detail", result: "Podcast" }, 
-        b: { text: "Überblick", result: "Erklärvideo" } 
+        a: { text: "Detail", result: "Podcast", finalSentence: "Nimm deine Hörer mit auf eine tiefgründige akustische Reise!" }, 
+        b: { text: "Überblick", result: "Erklärvideo", finalSentence: "Bringe komplexe Zusammenhänge in einem dynamischen Video auf den Punkt!" } 
       },
       "q3_dig_les": { 
         text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
-        a: { text: "Detail", result: "Website" }, 
-        b: { text: "Überblick", result: "Blogbeitrag" } 
+        a: { text: "Detail", result: "Website", finalSentence: "Gestalte eine interaktive Plattform für umfassendes Wissen!" }, 
+        b: { text: "Überblick", result: "Blogbeitrag", finalSentence: "Teile deine Erkenntnisse in einem knackigen, leicht lesbaren Artikel!" } 
       },
       "q3_ana_seh": { 
         text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
-        a: { text: "Detail", result: "Poster" }, 
-        b: { text: "Überblick", result: "Graphical Recording" } 
+        a: { text: "Detail", result: "Poster", finalSentence: "Präsentiere deine Daten strukturiert und übersichtlich auf einem Plakat!" }, 
+        b: { text: "Überblick", result: "Graphical Recording", finalSentence: "Verwandle Gedanken live in ein kreatives, visuelles Gesamtbild!" } 
       },
       "q3_ana_hor": { 
         text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
-        a: { text: "Detail", result: "World Café" }, 
-        b: { text: "Überblick", result: "Pecha Kucha" }
+        a: { text: "Detail", result: "World Café", finalSentence: "Eröffne intensive Diskussionen in gemütlicher Runden-Atmosphäre!" }, 
+        b: { text: "Überblick", result: "Pecha Kucha", finalSentence: "Nutze das präzise 20x20-Format für einen rasanten Vortrag!" }
       }
     };
 
@@ -177,4 +180,115 @@
         if (data && data.id) {
           currentSessionId = data.id;
         } else {
-          currentSessionId =
+          currentSessionId = "default_session";
+        }
+        
+        if (mode === 'teacher') {
+          listenToSessionResponses(currentSessionId);
+        }
+      });
+
+      if (mode === 'student') {
+        document.getElementById('student-view').classList.remove('hidden');
+        renderQuestion();
+      } else {
+        document.getElementById('teacher-view').classList.remove('hidden');
+        initTeacherDashboard();
+      }
+    };
+
+    window.handleAnswer = function(choice) {
+      const q = quizData[currentQuestionKey];
+      const selected = choice === 'A' ? q.a : q.b;
+      
+      if (selected.result) {
+        const sessionResponsesRef = ref(db, `responses/${currentSessionId}`);
+        push(sessionResponsesRef, { result: selected.result });
+        
+        // Show result and its custom sentence
+        document.getElementById('student-outcome').innerText = selected.result;
+        document.getElementById('student-custom-sentence').innerText = selected.finalSentence || "";
+        
+        document.getElementById('question-container').classList.add('hidden');
+        document.getElementById('finished-container').classList.remove('hidden');
+      } else {
+        currentQuestionKey = selected.next;
+        renderQuestion();
+      }
+    };
+
+    function renderQuestion() {
+      const q = quizData[currentQuestionKey];
+      document.getElementById('question-text').innerText = q.text;
+      document.getElementById('btn-a').innerText = q.a.text;
+      document.getElementById('btn-b').innerText = q.b.text;
+    }
+
+    // 5. TEACHER DASHBOARD LOGIC
+    function initTeacherDashboard() {
+      const chartDiv = document.getElementById('results-chart');
+      chartDiv.innerHTML = ''; 
+      
+      possibleOutcomes.forEach(outcome => {
+        chartDiv.innerHTML += `
+          <div class="result-bar-container">
+            <div class="result-label">${outcome}</div>
+            <div class="result-bar-wrapper">
+              <div class="result-bar" id="bar-${outcome.replace(/\s+/g, '-')}"></div>
+            </div>
+            <div class="result-count" id="count-${outcome.replace(/\s+/g, '-')}">0</div>
+          </div>
+        `;
+      });
+    }
+
+    function listenToSessionResponses(sessionId) {
+      if (unsubscribeResponses) unsubscribeResponses(); 
+
+      const sessionResponsesRef = ref(db, `responses/${sessionId}`);
+
+      unsubscribeResponses = onValue(sessionResponsesRef, (snapshot) => {
+        const data = snapshot.val();
+        let counts = {};
+        possibleOutcomes.forEach(o => counts[o] = 0);
+        let total = 0;
+
+        if (data) {
+          Object.values(data).forEach(entry => {
+            if (counts[entry.result] !== undefined) {
+              counts[entry.result]++;
+              total++;
+            }
+          });
+        }
+
+        document.getElementById('total-count').innerText = total;
+
+        possibleOutcomes.forEach(outcome => {
+          const safeId = outcome.replace(/\s+/g, '-');
+          const count = counts[outcome];
+          const percentage = total === 0 ? 0 : (count / total) * 100;
+          
+          document.getElementById(`count-${safeId}`).innerText = count;
+          document.getElementById(`bar-${safeId}`).style.width = `${percentage}%`;
+        });
+      });
+    }
+
+    window.clearResults = function() {
+      const password = prompt("Bitte geben Sie das Lehrkraft-Passwort ein, um die Ergebnisse zurückzusetzen:");
+      if (!password) return;
+
+      const newSessionId = "session_" + Date.now();
+      
+      set(activeSessionRef, {
+        id: newSessionId,
+        adminToken: password
+      }).catch(error => {
+        alert("Falsches Passwort! Die Live-Ergebnisse konnten nicht zurückgesetzt werden.");
+        console.error("Auth Error: ", error);
+      });
+    };
+  </script>
+</body>
+</html>
