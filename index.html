@@ -22,39 +22,39 @@
     // 3. QUESTION TREE DATA (3 levels = 8 outcomes)
     const quizData = {
       "q1": { 
-        text: "Are you more logical or creative?", 
-        a: { text: "Logical", next: "q2_log" }, 
-        b: { text: "Creative", next: "q2_cre" } 
+        text: "Möchtest du lieber ein digitales oder ein analoges Präsentationsformat?", 
+        a: { text: "Digital", next: "q2_dig" }, 
+        b: { text: "Analog", next: "q2_ana" } 
       },
-      "q2_log": { 
-        text: "Do you prefer working alone or in a team?", 
-        a: { text: "Alone", next: "q3_log_alo" }, 
-        b: { text: "Team", next: "q3_log_tea" } 
+      "q2_dig": { 
+        text: "Lieber gesprochene oder geschriebene Sprache?", 
+        a: { text: "gesprochen", next: "q3_dig_hor" }, 
+        b: { text: "geschrieben", next: "q3_dig_les" } 
       },
-      "q2_cre": { 
-        text: "Do you prefer drawing or writing?", 
-        a: { text: "Drawing", next: "q3_cre_dra" }, 
-        b: { text: "Writing", next: "q3_cre_wri" } 
+      "q2_ana": { 
+        text: "Lieber sehen oder hören?", 
+        a: { text: "Sehen", next: "q3_ana_seh" }, 
+        b: { text: "Hören", next: "q3_ana_hor" } 
       },
-      "q3_log_alo": { 
-        text: "Do you like numbers or code?", 
-        a: { text: "Numbers", result: "Outcome 1" }, 
-        b: { text: "Code", result: "Outcome 2" } 
+      "q3_dig_hor": { 
+        text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
+        a: { text: "Detail", result: "Podcast" }, 
+        b: { text: "Überblick", result: "Erklärvideo" } 
       },
-      "q3_log_tea": { 
-        text: "Do you prefer leading or following?", 
-        a: { text: "Leading", result: "Outcome 3" }, 
-        b: { text: "Following", result: "Outcome 4" } 
+      "q3_dig_les": { 
+        text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
+        a: { text: "Detail", result: "Website" }, 
+        b: { text: "Überblick", result: "Blogbeitrag" } 
       },
-      "q3_cre_dra": { 
-        text: "Digital art or traditional?", 
-        a: { text: "Digital", result: "Outcome 5" }, 
-        b: { text: "Traditional", result: "Outcome 6" } 
+      "q3_ana_seh": { 
+        text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
+        a: { text: "Detail", result: "Poster" }, 
+        b: { text: "Überblick", result: "Graphical Recording" } 
       },
-      "q3_cre_wri": { 
-        text: "Fiction or Non-fiction?", 
-        a: { text: "Fiction", result: "Outcome 7" }, 
-        b: { text: "Non-fiction", result: "Outcome 8" } 
+      "q3_ana_hor": { 
+        text: "Soll es ins Detail gehen oder eher einen Überblick bieten?", 
+        a: { text: "Detail", result: "World Café" }, 
+        b: { text: "Non-fiction", result: "Pecha Kucha" } 
       }
     };
 
