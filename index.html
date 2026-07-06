@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom Questionnaire</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --bg: #F3F4F6;
+      --text: #1F2937;
+      --card-bg: #FFFFFF;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      background-color: var(--card-bg);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+    }
+    h1 { margin-top: 0; font-size: 1.5rem; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn:hover { background-color: var(--primary-hover); }
+    
+    /* Teacher Dashboard Styles */
+    .result-bar-container {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .result-label { width: 100px; text-align: left; font-weight: bold; }
+    .result-bar-wrapper {
+      flex-grow: 1;
+      background-color: #E5E7EB;
+      border-radius: 4px;
+      height: 24px;
+      margin: 0 10px;
+      overflow: hidden;
+    }
+    .result-bar {
+      height: 100%;
+      background-color: var(--primary);
+      width: 0%;
+      transition: width 0.5s ease-out;
+    }
+    .result-count { width: 30px; text-align: right; }
+    
+    /* Utility */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div id="student-view" class="container hidden">
+    <div id="question-container">
+      <h1 id="question-text">Loading...</h1>
+      <button class="btn" id="btn-a" onclick="handleAnswer('A')">Option A</button>
+      <button class="btn" id="btn-b" onclick="handleAnswer('B')">Option B</button>
+    </div>
+    <div id="finished-container" class="hidden">
+      <h1>Thank you!</h1>
+      <p>Look at the teacher's screen to see the results.</p>
+    </div>
+  </div>
+
+  <div id="teacher-view" class="container hidden">
+    <h1>Live Classroom Results</h1>
+    <p>Total Responses: <span id="total-count">0</span></p>
+    <div id="results-chart"></div>
+    <br>
+    <button class="btn" onclick="clearResults()" style="background-color: #DC2626;">Clear All Data</button>
+  </div>
+
+  <div id="mode-selector" class="container">
+    <h1>Select Mode</h1>
+    <button class="btn" onclick="startApp('student')">I am a Student</button>
+    <button class="btn" onclick="startApp('teacher')" style="background-color: #059669;">I am the Teacher</button>
+  </div>
+
+  <script type="module">
+    // 1. IMPORT FIREBASE (Using standard modules)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    // 2. REPLACE THIS WITH YOUR FIREBASE CONFIG (See Step 2 below)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const resultsRef = ref(db, 'classroom_results');
+
+    // 3. QUESTION TREE DATA (3 levels = 8 outcomes)
+    const quizData = {
+      "q1": { 
+        text: "Are you more logical or creative?", 
+        a: { text: "Logical", next: "q2_log" }, 
+        b: { text: "Creative", next: "q2_cre" } 
+      },
+      "q2_log": { 
+        text: "Do you prefer working alone or in a team?", 
+        a: { text: "Alone", next: "q3_log_alo" }, 
+        b: { text: "Team", next: "q3_log_tea" } 
+      },
+      "q2_cre": { 
+        text: "Do you prefer drawing or writing?", 
+        a: { text: "Drawing", next: "q3_cre_dra" }, 
+        b: { text: "Writing", next: "q3_cre_wri" } 
+      },
+      "q3_log_alo": { 
+        text: "Do you like numbers or code?", 
+        a: { text: "Numbers", result: "Outcome 1" }, 
+        b: { text: "Code", result: "Outcome 2" } 
+      },
+      "q3_log_tea": { 
+        text: "Do you prefer leading or following?", 
+        a: { text: "Leading", result: "Outcome 3" }, 
+        b: { text: "Following", result: "Outcome 4" } 
+      },
+      "q3_cre_dra": { 
+        text: "Digital art or traditional?", 
+        a: { text: "Digital", result: "Outcome 5" }, 
+        b: { text: "Traditional", result: "Outcome 6" } 
+      },
+      "q3_cre_wri": { 
+        text: "Fiction or Non-fiction?", 
+        a: { text: "Fiction", result: "Outcome 7" }, 
+        b: { text: "Non-fiction", result: "Outcome 8" } 
+      }
+    };
+
+    const possibleOutcomes = ["Outcome 1", "Outcome 2", "Outcome 3", "Outcome 4", "Outcome 5", "Outcome 6", "Outcome 7", "Outcome 8"];
+    let currentQuestionKey = "q1";
+
+    // 4. UI LOGIC
+    window.startApp = function(mode) {
+      document.getElementById('mode-selector').classList.add('hidden');
+      if (mode === 'student') {
+        document.getElementById('student-view').classList.remove('hidden');
+        renderQuestion();
+      } else {
+        document.getElementById('teacher-view').classList.remove('hidden');
+        initTeacherDashboard();
+      }
+    };
+
+    window.handleAnswer = function(choice) {
+      const q = quizData[currentQuestionKey];
+      const selected = choice === 'A' ? q.a : q.b;
+      
+      if (selected.result) {
+        // Reached an outcome! Send to Firebase
+        push(resultsRef, { result: selected.result });
+        
+        // Update UI
+        document.getElementById('question-container').classList.add('hidden');
+        document.getElementById('finished-container').classList.remove('hidden');
+      } else {
+        // Go to next question
+        currentQuestionKey = selected.next;
+        renderQuestion();
+      }
+    };
+
+    function renderQuestion() {
+      const q = quizData[currentQuestionKey];
+      document.getElementById('question-text').innerText = q.text;
+      document.getElementById('btn-a').innerText = q.a.text;
+      document.getElementById('btn-b').innerText = q.b.text;
+    }
+
+    // 5. TEACHER DASHBOARD LOGIC
+    function initTeacherDashboard() {
+      const chartDiv = document.getElementById('results-chart');
+      
+      // Build empty bars
+      possibleOutcomes.forEach(outcome => {
+        chartDiv.innerHTML += `
+          <div class="result-bar-container">
+            <div class="result-label">${outcome}</div>
+            <div class="result-bar-wrapper">
+              <div class="result-bar" id="bar-${outcome.replace(/\s+/g, '-')}"></div>
+            </div>
+            <div class="result-count" id="count-${outcome.replace(/\s+/g, '-')}">0</div>
+          </div>
+        `;
+      });
+
+      // Listen for data changes in real-time
+      onValue(resultsRef, (snapshot) => {
+        const data = snapshot.val();
+        let counts = {};
+        possibleOutcomes.forEach(o => counts[o] = 0);
+        let total = 0;
+
+        if (data) {
+          Object.values(data).forEach(entry => {
+            if (counts[entry.result] !== undefined) {
+              counts[entry.result]++;
+              total++;
+            }
+          });
+        }
+
+        document.getElementById('total-count').innerText = total;
+
+        // Update bars and numbers
+        possibleOutcomes.forEach(outcome => {
+          const safeId = outcome.replace(/\s+/g, '-');
+          const count = counts[outcome];
+          const percentage = total === 0 ? 0 : (count / total) * 100;
+          
+          document.getElementById(`count-${safeId}`).innerText = count;
+          document.getElementById(`bar-${safeId}`).style.width = `${percentage}%`;
+        });
+      });
+    }
+
+    window.clearResults = function() {
+      if(confirm("Are you sure you want to delete all student answers?")) {
+        remove(resultsRef);
+      }
+    };
+  </script>
+</body>
+</html>
