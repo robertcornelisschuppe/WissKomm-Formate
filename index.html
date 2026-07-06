@@ -34,6 +34,7 @@
       text-align: center;
     }
     h1 { margin-top: 0; font-size: 1.5rem; }
+    h2 { font-size: 1.3rem; margin: 20px 0; color: var(--primary); }
     .btn {
       display: block;
       width: 100%;
@@ -86,6 +87,7 @@
     </div>
     <div id="finished-container" class="hidden">
       <h1>Vielen Dank!</h1>
+      <h2>Wie wäre es mit: <span id="student-outcome"></span>?</h2>
       <p>Deine Antwort wurde übermittelt. Schaue auf den Bildschirm der Lehrkraft für die Live-Ergebnisse.</p>
     </div>
   </div>
@@ -170,118 +172,9 @@
     window.startApp = function(mode) {
       document.getElementById('mode-selector').classList.add('hidden');
       
-      // Both roles now listen live to get the synchronized session ID structure
       onValue(activeSessionRef, (snapshot) => {
         const data = snapshot.val();
         if (data && data.id) {
           currentSessionId = data.id;
         } else {
-          currentSessionId = "default_session";
-        }
-        
-        // If teacher mode, redirect their visualization to the active channel node
-        if (mode === 'teacher') {
-          listenToSessionResponses(currentSessionId);
-        }
-      });
-
-      if (mode === 'student') {
-        document.getElementById('student-view').classList.remove('hidden');
-        renderQuestion();
-      } else {
-        document.getElementById('teacher-view').classList.remove('hidden');
-        initTeacherDashboard();
-      }
-    };
-
-    window.handleAnswer = function(choice) {
-      const q = quizData[currentQuestionKey];
-      const selected = choice === 'A' ? q.a : q.b;
-      
-      if (selected.result) {
-        const sessionResponsesRef = ref(db, `responses/${currentSessionId}`);
-        push(sessionResponsesRef, { result: selected.result });
-        
-        document.getElementById('question-container').classList.add('hidden');
-        document.getElementById('finished-container').classList.remove('hidden');
-      } else {
-        currentQuestionKey = selected.next;
-        renderQuestion();
-      }
-    };
-
-    function renderQuestion() {
-      const q = quizData[currentQuestionKey];
-      document.getElementById('question-text').innerText = q.text;
-      document.getElementById('btn-a').innerText = q.a.text;
-      document.getElementById('btn-b').innerText = q.b.text;
-    }
-
-    // 5. TEACHER DASHBOARD LOGIC
-    function initTeacherDashboard() {
-      const chartDiv = document.getElementById('results-chart');
-      chartDiv.innerHTML = ''; 
-      
-      possibleOutcomes.forEach(outcome => {
-        chartDiv.innerHTML += `
-          <div class="result-bar-container">
-            <div class="result-label">${outcome}</div>
-            <div class="result-bar-wrapper">
-              <div class="result-bar" id="bar-${outcome.replace(/\s+/g, '-')}"></div>
-            </div>
-            <div class="result-count" id="count-${outcome.replace(/\s+/g, '-')}">0</div>
-          </div>
-        `;
-      });
-    }
-
-    function listenToSessionResponses(sessionId) {
-      if (unsubscribeResponses) unsubscribeResponses(); 
-
-      const sessionResponsesRef = ref(db, `responses/${sessionId}`);
-
-      unsubscribeResponses = onValue(sessionResponsesRef, (snapshot) => {
-        const data = snapshot.val();
-        let counts = {};
-        possibleOutcomes.forEach(o => counts[o] = 0);
-        let total = 0;
-
-        if (data) {
-          Object.values(data).forEach(entry => {
-            if (counts[entry.result] !== undefined) {
-              counts[entry.result]++;
-              total++;
-            }
-          });
-        }
-
-        document.getElementById('total-count').innerText = total;
-
-        possibleOutcomes.forEach(outcome => {
-          const safeId = outcome.replace(/\s+/g, '-');
-          const count = counts[outcome];
-          const percentage = total === 0 ? 0 : (count / total) * 100;
-          
-          document.getElementById(`count-${safeId}`).innerText = count;
-          document.getElementById(`bar-${safeId}`).style.width = `${percentage}%`;
-        });
-      });
-    }
-
-    window.clearResults = function() {
-      const password = prompt("Bitte geben Sie das Lehrkraft-Passwort ein, um die Ergebnisse zurückzusetzen:");
-      if (!password) return;
-
-      const newSessionId = "session_" + Date.now();
-      
-      set(activeSessionRef, {
-        id: newSessionId,
-        adminToken: password
-      }).catch(error => {
-        alert("Falsches Passwort! Die Live-Ergebnisse konnten nicht zurückgesetzt werden.");
-        console.error("Auth Error: ", error);
-      });
-    };
-  </script>
-</body>
-</html>
+          currentSessionId =
