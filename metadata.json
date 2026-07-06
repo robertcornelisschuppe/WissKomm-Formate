@@ -1,0 +1,6 @@
+{
+  "name": "Classroom Binary Questionnaire",
+  "description": "A real-time binary decision tree questionnaire for classrooms. Students scan a QR code, answer 3 binary-choice questions, and land on one of 8 outcomes, which aggregate live on a shared teacher screen.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
