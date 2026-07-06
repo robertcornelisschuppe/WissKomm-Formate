@@ -1,125 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Classroom Questionnaire</title>
-  <style>
-    :root {
-      --primary: #4F46E5;
-      --primary-hover: #4338CA;
-      --bg: #F3F4F6;
-      --text: #1F2937;
-      --card-bg: #FFFFFF;
-    }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-    .container {
-      background-color: var(--card-bg);
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 600px;
-      text-align: center;
-    }
-    h1 { margin-top: 0; font-size: 1.5rem; }
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 15px;
-      margin: 10px 0;
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.1rem;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    .btn:hover { background-color: var(--primary-hover); }
-    
-    /* Teacher Dashboard Styles */
-    .result-bar-container {
-      display: flex;
-      align-items: center;
-      margin: 10px 0;
-    }
-    .result-label { width: 100px; text-align: left; font-weight: bold; }
-    .result-bar-wrapper {
-      flex-grow: 1;
-      background-color: #E5E7EB;
-      border-radius: 4px;
-      height: 24px;
-      margin: 0 10px;
-      overflow: hidden;
-    }
-    .result-bar {
-      height: 100%;
-      background-color: var(--primary);
-      width: 0%;
-      transition: width 0.5s ease-out;
-    }
-    .result-count { width: 30px; text-align: right; }
-    
-    /* Utility */
-    .hidden { display: none !important; }
-  </style>
-</head>
-<body>
+<script type="module">
+    // 1. IMPORT FIREBASE (Updated to your version 12.15.0 and adding Database)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
-  <div id="student-view" class="container hidden">
-    <div id="question-container">
-      <h1 id="question-text">Loading...</h1>
-      <button class="btn" id="btn-a" onclick="handleAnswer('A')">Option A</button>
-      <button class="btn" id="btn-b" onclick="handleAnswer('B')">Option B</button>
-    </div>
-    <div id="finished-container" class="hidden">
-      <h1>Thank you!</h1>
-      <p>Look at the teacher's screen to see the results.</p>
-    </div>
-  </div>
-
-  <div id="teacher-view" class="container hidden">
-    <h1>Live Classroom Results</h1>
-    <p>Total Responses: <span id="total-count">0</span></p>
-    <div id="results-chart"></div>
-    <br>
-    <button class="btn" onclick="clearResults()" style="background-color: #DC2626;">Clear All Data</button>
-  </div>
-
-  <div id="mode-selector" class="container">
-    <h1>Select Mode</h1>
-    <button class="btn" onclick="startApp('student')">I am a Student</button>
-    <button class="btn" onclick="startApp('teacher')" style="background-color: #059669;">I am the Teacher</button>
-  </div>
-
-  <script type="module">
-    // 1. IMPORT FIREBASE (Using standard modules)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-
-    // 2. REPLACE THIS WITH YOUR FIREBASE CONFIG (See Step 2 below)
+    // 2. YOUR FIREBASE CONFIGURATION
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyCfU5OL9OoX-KU_g5Y6vt9EoqIEb9yjNnA",
+      authDomain: "wisskomm-formate.firebaseapp.com",
+      databaseURL: "https://wisskomm-formate-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "wisskomm-formate",
+      storageBucket: "wisskomm-formate.firebasestorage.app",
+      messagingSenderId: "104797758706",
+      appId: "1:104797758706:web:aec7a1f3a619a7ffa75c6b"
     };
 
+    // Initialize Firebase and Database
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const resultsRef = ref(db, 'classroom_results');
@@ -256,5 +151,3 @@
       }
     };
   </script>
-</body>
-</html>
