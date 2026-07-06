@@ -35,7 +35,7 @@
     }
     h1 { margin-top: 0; font-size: 1.5rem; }
     h2 { font-size: 1.3rem; margin: 20px 0; color: var(--primary); }
-    .custom-sentence { font-size: 1.1rem; font-style: italic; color: #4B5563; margin-bottom: 20px; }
+    .custom-sentence { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin: 25px 0; }
     .btn {
       display: block;
       width: 100%;
@@ -128,7 +128,6 @@
     let currentSessionId = "default_session";
     let unsubscribeResponses = null;
 
-    // Custom sentences can be customized inside the "finalSentence" keys below
     const quizData = {
       "q1": { 
         text: "Möchtest du lieber ein digitales oder ein analoges Präsentationsformat?", 
@@ -204,8 +203,7 @@
         const sessionResponsesRef = ref(db, `responses/${currentSessionId}`);
         push(sessionResponsesRef, { result: selected.result });
         
-        // Show result and its custom sentence
-        document.getElementById('student-outcome').innerText = selected.result;
+        // ONLY target the customized sentence element now
         document.getElementById('student-custom-sentence').innerText = selected.finalSentence || "";
         
         document.getElementById('question-container').classList.add('hidden');
