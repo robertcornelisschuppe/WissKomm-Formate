@@ -104,12 +104,10 @@
     <button class="btn" onclick="startApp('teacher')" style="background-color: #059669;">Ich bin die Lehrkraft</button>
   </div>
 
-<script type="module">
-    // 1. IMPORT FIREBASE (Using set instead of remove)
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
-    // 2. YOUR FIREBASE CONFIGURATION
     const firebaseConfig = {
       apiKey: "AIzaSyCfU5OL9OoX-KU_g5Y6vt9EoqIEb9yjNnA",
       authDomain: "wisskomm-formate.firebaseapp.com",
@@ -120,7 +118,6 @@
       appId: "1:104797758706:web:aec7a1f3a619a7ffa75c6b"
     };
 
-    // Initialize Firebase and Database (Explicitly targeting Europe)
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app, firebaseConfig.databaseURL);
     
@@ -128,7 +125,6 @@
     let currentSessionId = "default_session";
     let unsubscribeResponses = null;
 
-    // 3. QUESTION TREE DATA
     const quizData = {
       "q1": { 
         text: "Möchtest du lieber ein digitales oder ein analoges Präsentationsformat?", 
@@ -173,16 +169,25 @@
     // 4. UI LOGIC
     window.startApp = function(mode) {
       document.getElementById('mode-selector').classList.add('hidden');
+      
+      // Both roles now listen live to get the synchronized session ID structure
+      onValue(activeSessionRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.id) {
+          currentSessionId = data.id;
+        } else {
+          currentSessionId = "default_session";
+        }
+        
+        // If teacher mode, redirect their visualization to the active channel node
+        if (mode === 'teacher') {
+          listenToSessionResponses(currentSessionId);
+        }
+      });
+
       if (mode === 'student') {
         document.getElementById('student-view').classList.remove('hidden');
-        // Fetch the active session room ID once right as the student starts
-        onValue(activeSessionRef, (snapshot) => {
-          const data = snapshot.val();
-          if (data && data.id) {
-            currentSessionId = data.id;
-          }
-          renderQuestion();
-        }, { onlyOnce: true });
+        renderQuestion();
       } else {
         document.getElementById('teacher-view').classList.remove('hidden');
         initTeacherDashboard();
@@ -194,11 +199,9 @@
       const selected = choice === 'A' ? q.a : q.b;
       
       if (selected.result) {
-        // Send to the active session group in the database
         const sessionResponsesRef = ref(db, `responses/${currentSessionId}`);
         push(sessionResponsesRef, { result: selected.result });
         
-        // Update UI
         document.getElementById('question-container').classList.add('hidden');
         document.getElementById('finished-container').classList.remove('hidden');
       } else {
@@ -230,33 +233,13 @@
           </div>
         `;
       });
-
-      // Watch for session updates. If the teacher changes the session, change our live data feed.
-      onValue(activeSessionRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.id) {
-          currentSessionId = data.id;
-          listenToSessionResponses(currentSessionId);
-        } else {
-          listenToSessionResponses("default_session");
-        }
-      });
     }
 
     function listenToSessionResponses(sessionId) {
-      if (unsubscribeResponses) unsubscribeResponses(); // Unsubscribe from old session tracking
+      if (unsubscribeResponses) unsubscribeResponses(); 
 
       const sessionResponsesRef = ref(db, `responses/${sessionId}`);
 
-      // Reset dashboard graphics instantly for the new session
-      possibleOutcomes.forEach(outcome => {
-        const safeId = outcome.replace(/\s+/g, '-');
-        document.getElementById(`count-${safeId}`).innerText = '0';
-        document.getElementById(`bar-${safeId}`).style.width = '0%';
-      });
-      document.getElementById('total-count').innerText = '0';
-
-      // Start listening live to this session
       unsubscribeResponses = onValue(sessionResponsesRef, (snapshot) => {
         const data = snapshot.val();
         let counts = {};
@@ -291,7 +274,6 @@
 
       const newSessionId = "session_" + Date.now();
       
-      // Send the reset request with the password token to be validated by Firebase rules
       set(activeSessionRef, {
         id: newSessionId,
         adminToken: password
